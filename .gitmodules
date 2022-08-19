@@ -1,9 +1,9 @@
-[submodule "lib/openzeppelin/contracts"]
-	path = lib/openzeppelin/contracts
-	url = git@github.com:OpenZeppelin/openzeppelin-contracts.git
 [submodule "lib/morpho-dao/morpho-core-v1"]
 	path = lib/morpho-dao/morpho-core-v1
 	url = https://github.com/morpho-dao/morpho-core-v1
 [submodule "lib/morpho-dao/morpho-utils"]
 	path = lib/morpho-dao/morpho-utils
 	url = https://github.com/morpho-dao/morpho-utils
+[submodule "lib/openzeppelin/contracts"]
+	path = lib/openzeppelin/contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
