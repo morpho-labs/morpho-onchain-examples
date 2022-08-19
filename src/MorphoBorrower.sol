@@ -65,7 +65,7 @@ contract MorphoBorrower {
         borrowedP2PUSD = borrowedP2P.mul(oraclePrice); // in 18 decimals, whatever the underlying token
     }
 
-    /// @notice Returns the average borrow rate per block experience on the DAI market.
+    /// @notice Returns the average borrow rate per block experienced on the DAI market.
     /// @dev The borrow rate experienced on a market is specific to each user,
     ///      dependending on how their borrow is matched peer-to-peer or borrowed to the Compound pool.
     /// @return The rate per block at which borrow interests are accumulated on average on the DAI market.
@@ -74,6 +74,14 @@ contract MorphoBorrower {
             ILens(LENS).getAverageBorrowRatePerBlock(
                 CDAI // the DAI market, represented by the cDAI ERC20 token
             );
+    }
+
+    /// @notice Returns the average borrow APR experienced on the DAI market.
+    /// @dev The borrow rate experienced on a market is specific to each user,
+    ///      dependending on how their borrow is matched peer-to-peer or supplied to the Compound pool.
+    /// @return The APR at which borrow interests are accumulated on average on the DAI market.
+    function getDAIAvgBorrowAPR() public view returns (uint256) {
+        return getDAIAvgBorrowRatePerBlock() * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns the borrow rate per block this contract experiences on the WBTC market.
@@ -100,6 +108,14 @@ contract MorphoBorrower {
 
         return
             (borrowedOnPool + borrowedP2P).mul(borrowRatePerBlock) * _nbBlocks;
+    }
+
+    /// @notice Returns the expected APR at which borrow interests are accrued by this contract, on the WBTC market.
+    /// @return The APR at which WBTC borrow interests are accrued (in 18 decimals, whatever the market).
+    function getWBTCBorrowAPR() public view returns (uint256) {
+        uint256 borrowRatePerBlock = getWBTCSupplyRatePerBlock();
+
+        return borrowRatePerBlock * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns whether this contract is near liquidation (with a 5% threshold) on the WBTC market.
