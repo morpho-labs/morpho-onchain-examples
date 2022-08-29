@@ -13,7 +13,7 @@ interface IWETH9 {
     function withdraw(uint256) external;
 }
 
-contract MorphoBorrower {
+contract MorphoCompoundBorrower {
     using CompoundMath for uint256;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -25,6 +25,8 @@ contract MorphoBorrower {
 
     address public constant LENS = 0x930f1b46e1D081Ec1524efD95752bE3eCe51EF67;
     address public constant MORPHO = 0x8888882f8f843896699869179fB6E4f7e3B58888;
+
+    uint256 public constant BLOCKS_PER_YEAR = 4 * 60 * 24 * 365.25 days;
 
     ICompoundOracle public immutable ORACLE;
 
@@ -59,16 +61,16 @@ contract MorphoBorrower {
     {
         (uint256 borrowedOnPool, uint256 borrowedP2P) = getWBTCBorrowBalance();
 
-        uint256 oraclePrice = ORACLE.getUnderlyingPrice(CWBTC2); // in (36 - nb decimals of WBTC = 30) decimals
+        uint256 oraclePrice = ORACLE.getUnderlyingPrice(CWBTC2); // with (36 - nb decimals of WBTC = 30) decimals
 
-        borrowedOnPoolUSD = borrowedOnPool.mul(oraclePrice); // in 18 decimals, whatever the underlying token
-        borrowedP2PUSD = borrowedP2P.mul(oraclePrice); // in 18 decimals, whatever the underlying token
+        borrowedOnPoolUSD = borrowedOnPool.mul(oraclePrice); // with 18 decimals, whatever the underlying token
+        borrowedP2PUSD = borrowedP2P.mul(oraclePrice); // with 18 decimals, whatever the underlying token
     }
 
     /// @notice Returns the average borrow rate per block experienced on the DAI market.
     /// @dev The borrow rate experienced on a market is specific to each user,
     ///      dependending on how their borrow is matched peer-to-peer or borrowed to the Compound pool.
-    /// @return The rate per block at which borrow interests are accumulated on average on the DAI market.
+    /// @return The rate per block at which borrow interests are accrued on average on the DAI market (with 18 decimals, whatever the market).
     function getDAIAvgBorrowRatePerBlock() public view returns (uint256) {
         return
             ILens(LENS).getAverageBorrowRatePerBlock(
@@ -79,21 +81,50 @@ contract MorphoBorrower {
     /// @notice Returns the average borrow APR experienced on the DAI market.
     /// @dev The borrow rate experienced on a market is specific to each user,
     ///      dependending on how their borrow is matched peer-to-peer or supplied to the Compound pool.
-    /// @return The APR at which borrow interests are accumulated on average on the DAI market.
+    /// @return The APR at which borrow interests are accrued on average on the DAI market (with 18 decimals, whatever the market).
     function getDAIAvgBorrowAPR() public view returns (uint256) {
         return getDAIAvgBorrowRatePerBlock() * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns the borrow rate per block this contract experiences on the WBTC market.
     /// @dev The borrow rate experienced on a market is specific to each user,
-    ///      dependending on how their borrow is matched peer-to-peer or borrowed to the Compound pool.
-    /// @return The rate per block at which borrow interests are accumulated by this contract on the WBTC market.
+    ///      dependending on how their borrow is matched peer-to-peer or supplied to the Compound pool.
+    /// @return The rate per block at which borrow interests are accrued by this contract on the WBTC market (with 18 decimals).
     function getWBTCBorrowRatePerBlock() public view returns (uint256) {
         return
             ILens(LENS).getCurrentUserBorrowRatePerBlock(
                 CWBTC2, // the WBTC market, represented by the cWBTC2 ERC20 token
                 address(this) // the address of the user you want to know the borrow rate of
             );
+    }
+
+    /// @notice Returns the expected APR at which borrow interests are accrued by this contract, on the WBTC market.
+    /// @dev The borrow rate experienced on a market is specific to each user,
+    ///      dependending on how their borrow is matched peer-to-peer or supplied to the AaveV2 pool.
+    /// @return The APR at which WBTC borrow interests are accrued (with 18 decimals, whatever the market).
+    function getWBTCBorrowAPR() public view returns (uint256) {
+        uint256 borrowRatePerBlock = getWBTCBorrowRatePerBlock();
+
+        return borrowRatePerBlock * BLOCKS_PER_YEAR;
+    }
+
+    /// @notice Returns the borrow APR this contract will experience (at maximum) if it borrows the given amount from the WBTC market.
+    /// @dev The borrow rate experienced on a market is specific to each user,
+    ///      dependending on how their borrow is matched peer-to-peer or supplied to the Compound pool.
+    /// @return The APR at which borrow interests would be accrued by this contract on the WBTC market (with 18 decimals).
+    function getWBTCNextSupplyAPR(uint256 _amount)
+        public
+        view
+        returns (uint256)
+    {
+        (uint256 nextSupplyRatePerBlock, , , ) = ILens(LENS)
+            .getNextUserSupplyRatePerBlock(
+                CWBTC2, // the WBTC market, represented by the cWBTC2 ERC20 token
+                address(this), // the address of the user you want to know the next supply rate of
+                _amount
+            );
+
+        return nextSupplyRatePerBlock * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns the expected amount of borrow interests accrued by this contract, on the WBTC market, after `_nbBlocks`.
@@ -108,14 +139,6 @@ contract MorphoBorrower {
 
         return
             (borrowedOnPool + borrowedP2P).mul(borrowRatePerBlock) * _nbBlocks;
-    }
-
-    /// @notice Returns the expected APR at which borrow interests are accrued by this contract, on the WBTC market.
-    /// @return The APR at which WBTC borrow interests are accrued (in 18 decimals, whatever the market).
-    function getWBTCBorrowAPR() public view returns (uint256) {
-        uint256 borrowRatePerBlock = getWBTCSupplyRatePerBlock();
-
-        return borrowRatePerBlock * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns whether this contract is near liquidation (with a 5% threshold) on the WBTC market.

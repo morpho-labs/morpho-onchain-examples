@@ -13,7 +13,7 @@ interface IWETH9 {
     function withdraw(uint256) external;
 }
 
-contract MorphoSupplier {
+contract MorphoCompoundSupplier {
     using CompoundMath for uint256;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -61,16 +61,16 @@ contract MorphoSupplier {
     {
         (uint256 suppliedOnPool, uint256 suppliedP2P) = getWBTCSupplyBalance();
 
-        uint256 oraclePrice = ORACLE.getUnderlyingPrice(CWBTC2); // in (36 - nb decimals of WBTC = 28) decimals
+        uint256 oraclePrice = ORACLE.getUnderlyingPrice(CWBTC2); // with (36 - nb decimals of WBTC = 28) decimals
 
-        suppliedOnPoolUSD = suppliedOnPool.mul(oraclePrice); // in 18 decimals, whatever the underlying token
-        suppliedP2PUSD = suppliedP2P.mul(oraclePrice); // in 18 decimals, whatever the underlying token
+        suppliedOnPoolUSD = suppliedOnPool.mul(oraclePrice); // with 18 decimals, whatever the underlying token
+        suppliedP2PUSD = suppliedP2P.mul(oraclePrice); // with 18 decimals, whatever the underlying token
     }
 
     /// @notice Returns the average supply rate per block experienced on the DAI market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
-    /// @return The rate per block at which supply interests are accumulated on average on the DAI market.
+    /// @return The rate per block at which supply interests are accrued on average on the DAI market (with 18 decimals).
     function getDAIAvgSupplyRatePerBlock() public view returns (uint256) {
         return
             ILens(LENS).getAverageSupplyRatePerBlock(
@@ -81,7 +81,7 @@ contract MorphoSupplier {
     /// @notice Returns the average supply APR experienced on the DAI market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
-    /// @return The APR at which supply interests are accumulated on average on the DAI market.
+    /// @return The APR at which supply interests are accrued on average on the DAI market (with 18 decimals).
     function getDAIAvgSupplyAPR() public view returns (uint256) {
         return getDAIAvgSupplyRatePerBlock() * BLOCKS_PER_YEAR;
     }
@@ -89,7 +89,7 @@ contract MorphoSupplier {
     /// @notice Returns the supply rate per block this contract experiences on the WBTC market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
-    /// @return The rate per block at which supply interests are accumulated by this contract on the WBTC market.
+    /// @return The rate per block at which supply interests are accrued by this contract on the WBTC market (with 18 decimals).
     function getWBTCSupplyRatePerBlock() public view returns (uint256) {
         return
             ILens(LENS).getCurrentUserSupplyRatePerBlock(
@@ -98,25 +98,35 @@ contract MorphoSupplier {
             );
     }
 
-    /// @notice Returns the supply rate per block this contract experiences on the WBTC market.
+    /// @notice Returns the expected APR at which supply interests are accrued by this contract, on the WBTC market.
+    /// @return The APR at which WBTC supply interests are accrued (with 18 decimals).
+    function getWBTCSupplyAPR() public view returns (uint256) {
+        uint256 supplyRatePerBlock = getWBTCSupplyRatePerBlock();
+
+        return supplyRatePerBlock * BLOCKS_PER_YEAR;
+    }
+
+    /// @notice Returns the supply APR this contract will experience (at minimum) if it supplies the given amount on the WBTC market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
-    /// @return The rate per block at which supply interests are accumulated by this contract on the WBTC market.
-    function getWBTCNextSupplyRatePerBlock(uint256 _amount)
+    /// @return The APR at which supply interests would be accrued by this contract on the WBTC market (with 18 decimals).
+    function getWBTCNextSupplyAPR(uint256 _amount)
         public
         view
         returns (uint256)
     {
-        return
-            ILens(LENS).getNextUserSupplyRatePerBlock(
+        (uint256 nextSupplyRatePerBlock, , , ) = ILens(LENS)
+            .getNextUserSupplyRatePerBlock(
                 CWBTC2, // the WBTC market, represented by the cWBTC2 ERC20 token
                 address(this), // the address of the user you want to know the next supply rate of
                 _amount
             );
+
+        return nextSupplyRatePerBlock * BLOCKS_PER_YEAR;
     }
 
     /// @notice Returns the expected amount of supply interests accrued by this contract, on the WBTC market, after `_nbBlocks`.
-    /// @return The expected amount of WBTC supply interests accrued (in 8 decimals, the number of decimals of WBTC).
+    /// @return The expected amount of WBTC supply interests accrued (with 8 decimals, the number of decimals of WBTC).
     function getWBTCExpectedAccruedInterests(uint256 _nbBlocks)
         public
         view
@@ -127,14 +137,6 @@ contract MorphoSupplier {
 
         return
             (suppliedOnPool + suppliedP2P).mul(supplyRatePerBlock) * _nbBlocks;
-    }
-
-    /// @notice Returns the expected APR at which supply interests are accrued by this contract, on the WBTC market.
-    /// @return The APR at which WBTC supply interests are accrued (in 18 decimals, whatever the market).
-    function getWBTCSupplyAPR() public view returns (uint256) {
-        uint256 supplyRatePerBlock = getWBTCSupplyRatePerBlock();
-
-        return supplyRatePerBlock * BLOCKS_PER_YEAR;
     }
 
     /// SUPPLY ///
