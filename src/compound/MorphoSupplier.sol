@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ILens} from "@morpho-dao/morpho-core-v1/contracts/compound/interfaces/ILens.sol";
 import {IMorpho, ICompoundOracle} from "@morpho-dao/morpho-core-v1/contracts/compound/interfaces/IMorpho.sol";
-import {IERC20} from "@openzeppelin/contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {CompoundMath} from "@morpho-dao/morpho-utils/src/math/CompoundMath.sol";
 
@@ -67,7 +67,7 @@ contract MorphoCompoundSupplier {
         suppliedP2PUSD = suppliedP2P.mul(oraclePrice); // with 18 decimals, whatever the underlying token
     }
 
-    /// @notice Returns the average supply rate per block experienced on the DAI market.
+    /// @notice Returns the average supply rate per block of the DAI market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
     /// @return The rate per block at which supply interests are accrued on average on the DAI market (with 18 decimals).
@@ -78,7 +78,7 @@ contract MorphoCompoundSupplier {
             );
     }
 
-    /// @notice Returns the average supply APR experienced on the DAI market.
+    /// @notice Returns the average supply APR of the DAI market.
     /// @dev The supply rate experienced on a market is specific to each user,
     ///      dependending on how their supply is matched peer-to-peer or supplied to the Compound pool.
     /// @return The APR at which supply interests are accrued on average on the DAI market (with 18 decimals).

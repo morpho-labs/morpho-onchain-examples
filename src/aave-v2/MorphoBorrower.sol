@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {ILens} from "./interfaces/ILens.sol";
 import {IMorpho} from "./interfaces/IMorpho.sol";
 import {IPriceOracleGetter} from "./interfaces/aave/IPriceOracleGetter.sol";
-import {IERC20} from "@openzeppelin/contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {WadRayMath} from "@morpho-dao/morpho-utils/src/math/WadRayMath.sol";
 
@@ -68,7 +68,7 @@ contract MorphoAaveV2Borrower {
         borrowedP2PDAI = borrowedP2P.wadMul(oraclePrice); // with 18 decimals, the number of decimals of DAI
     }
 
-    /// @notice Returns the average borrow APR experienced on the DAI market.
+    /// @notice Returns the average borrow APR of the DAI market.
     /// @dev The borrow rate experienced on a market is specific to each user,
     ///      dependending on how their borrow is matched peer-to-peer or supplied to the AaveV2 pool.
     /// @return The APR at which borrow interests are accumulated on average on the DAI market (with 27 decimals).
