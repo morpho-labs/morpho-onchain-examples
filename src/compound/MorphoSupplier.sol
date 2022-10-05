@@ -196,4 +196,14 @@ contract MorphoCompoundSupplier {
         IWETH9(WETH).withdraw(_amount);
         // this contract now has _amount ETH: address(this).balance == _amount
     }
+
+    /// REWARDS ///
+
+    function claimRewards() public {
+        address[] memory poolTokens = new address[](2);
+        poolTokens[0] = CDAI;
+        poolTokens[1] = CWBTC2;
+
+        IMorpho(MORPHO).claimRewards(poolTokens, false);
+    }
 }
